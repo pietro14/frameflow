@@ -2,15 +2,12 @@ import { GoogleGenAI } from "@google/genai";
 
 const client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
-const STYLE_PREFIX =
-  "Photorealistic image, taken with a smartphone camera, slightly imperfect framing, natural lighting. ";
-
 export async function generateFrame(
   prompt: string,
   referenceImageBytes?: Buffer,
   aspectRatio: string = "16:9"
 ): Promise<{ imageBytes: Buffer; mimeType: string; modelText?: string }> {
-  const fullPrompt = `${STYLE_PREFIX}\n\n${prompt}`;
+  const fullPrompt = prompt;
 
   const contents: Array<
     | string
@@ -31,7 +28,7 @@ export async function generateFrame(
     model: "gemini-2.5-flash-image",
     contents,
     config: {
-      responseModalities: ["Image", "Text"],
+      responseModalities: ["IMAGE", "TEXT"],
       imageConfig: {
         aspectRatio: aspectRatio as "16:9" | "9:16" | "1:1" | "3:4" | "4:3",
       },
