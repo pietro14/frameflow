@@ -26,7 +26,7 @@ export default function Home() {
         </h1>
         <p className="text-lg text-white/60 max-w-2xl mx-auto mb-10">
           Generate keyframes with AI, then let AI create smooth video transitions
-          between them. Build videos up to 30 seconds long with full creative control.
+          between them. Build videos up to 3 minutes long with full creative control.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link

@@ -6,7 +6,7 @@ import { PromptInput } from "../shared/PromptInput";
 import { FramePreview } from "../shared/FramePreview";
 import { Timeline } from "../shared/Timeline";
 
-const MAX_FRAMES = 7;
+const MAX_FRAMES = 37;
 
 export function StepKeyframe() {
   const { keyframes, addKeyframe, removeLastKeyframe, setStep } = useProjectStore();
