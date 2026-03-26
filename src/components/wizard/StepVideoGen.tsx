@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useProjectStore } from "@/lib/store";
 
 export function StepVideoGen() {
-  const { keyframes, clips, initClipsFromKeyframes, updateClip, setStep } =
+  const { keyframes, clips, initClipsFromKeyframes, updateClip, reset } =
     useProjectStore();
   const initialized = useRef(false);
 
@@ -71,14 +71,53 @@ export function StepVideoGen() {
   const allDone = clips.length > 0 && clips.every((c) => c.status === "succeeded");
   const anyFailed = clips.some((c) => c.status === "failed");
   const processing = clips.filter((c) => c.status === "processing").length;
+  const [isConcatenating, setIsConcatenating] = useState(false);
+  const [concatError, setConcatError] = useState<string | null>(null);
+  const [finalVideoUrl, setFinalVideoUrl] = useState<string | null>(null);
+
+  const handleConcatenate = async () => {
+    const videoUrls = clips
+      .filter((c) => c.status === "succeeded" && c.videoUrl)
+      .map((c) => c.videoUrl!);
+
+    if (videoUrls.length === 0) return;
+
+    // If only one clip, skip concatenation
+    if (videoUrls.length === 1) {
+      setFinalVideoUrl(videoUrls[0]);
+      return;
+    }
+
+    setIsConcatenating(true);
+    setConcatError(null);
+
+    try {
+      const resp = await fetch("/api/concat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ videoUrls }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || "Concatenation failed");
+      setFinalVideoUrl(data.videoUrl);
+    } catch (err) {
+      setConcatError(err instanceof Error ? err.message : "Concatenation failed");
+    } finally {
+      setIsConcatenating(false);
+    }
+  };
 
   return (
     <div className="flex flex-col items-center gap-6">
-      <h2 className="text-2xl font-bold">Generating Video Clips</h2>
+      <h2 className="text-2xl font-bold">
+        {finalVideoUrl ? "Your Video is Ready!" : "Generating Video Clips"}
+      </h2>
       <p className="text-white/60">
-        {allDone
-          ? "All clips ready!"
-          : `Generating ${clips.length} clips... (${processing} in progress)`}
+        {finalVideoUrl
+          ? "Your clips have been merged into one video."
+          : allDone
+            ? "All clips ready! Merge them into one video."
+            : `Generating ${clips.length} clips... (${processing} in progress)`}
       </p>
 
       <div className="w-full max-w-lg space-y-3">
@@ -131,13 +170,54 @@ export function StepVideoGen() {
         })}
       </div>
 
-      {allDone && (
+      {finalVideoUrl && (
+        <div className="w-full max-w-lg space-y-4">
+          <video
+            src={finalVideoUrl}
+            controls
+            autoPlay
+            className="w-full rounded-xl border border-white/10"
+          />
+          <div className="flex gap-3 justify-center">
+            <a
+              href={finalVideoUrl}
+              download="frameflow-video.mp4"
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-xl font-medium transition-colors"
+            >
+              Download Video
+            </a>
+            <button
+              onClick={reset}
+              className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-colors"
+            >
+              Start New Project
+            </button>
+          </div>
+        </div>
+      )}
+
+      {allDone && !finalVideoUrl && (
         <button
-          onClick={() => setStep("result")}
-          className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-xl font-medium transition-all"
+          onClick={handleConcatenate}
+          disabled={isConcatenating}
+          className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-xl font-medium transition-all disabled:opacity-50"
         >
-          View & Download Video
+          {isConcatenating ? (
+            <span className="flex items-center gap-2">
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Merging clips...
+            </span>
+          ) : (
+            "Merge & Download Video"
+          )}
         </button>
+      )}
+
+      {concatError && (
+        <p className="text-red-400 text-sm">{concatError}</p>
       )}
 
       {anyFailed && (
