@@ -14,8 +14,14 @@ export async function POST(request: NextRequest) {
 
     let referenceImageBytes: Buffer | undefined;
     if (referenceImageUrl) {
-      const resp = await fetch(referenceImageUrl);
-      referenceImageBytes = Buffer.from(await resp.arrayBuffer());
+      if (referenceImageUrl.startsWith("data:")) {
+        // Parse base64 data URL directly
+        const base64Data = referenceImageUrl.split(",")[1];
+        referenceImageBytes = Buffer.from(base64Data, "base64");
+      } else {
+        const resp = await fetch(referenceImageUrl);
+        referenceImageBytes = Buffer.from(await resp.arrayBuffer());
+      }
     }
 
     const result = await generateFrame(
